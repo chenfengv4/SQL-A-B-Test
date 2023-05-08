@@ -1,0 +1,96 @@
+CREATE TABLE assignments1 (
+user_id int,
+feature_flag_evaluation varchar(255),
+evaluated_at date,
+experiment_name varchar(255)
+);
+CREATE TABLE users1 (
+user_id int,
+city_name varchar(255),
+signup_marketing_channel varchar(255),
+first_order_at date
+);
+CREATE TABLE order1 (
+  user_id int,
+  order_type varchar(255),
+  order_id int,
+  order_value int,
+  order_placed_at date
+);
+-- --insert values into the created tables
+
+
+INSERT INTO assignments1 
+VALUES
+(1, 'test','2022-07-02','sundae_wizard'),
+(2, 'control','2022-07-11','sundae_wizard'),
+(3, 'test','2022-07-12','sundae_wizard'),
+(4, 'control','2022-07-11','sundae_wizard'),
+(5, 'test','2022-07-02','sundae_wizard'),
+(6, 'control','2022-07-15','sundae_wizard'),
+(7, 'test','2022-07-03','sundae_wizard'),
+(8, 'control','2022-07-04','sundae_wizard')
+
+;
+INSERT INTO users1
+VALUES
+(1, 'SF','self','2021-01-01'),
+(2, 'NY','refer','2021-02-01'),
+(3, 'NY','self','2021-03-01'),
+(4, 'SF','self','2021-04-01'),
+(5, 'NY','refer','2021-05-01'),
+(6, 'SF','self','2021-12-01'),
+(7, 'NY','self','2022-01-01'),
+(8, 'SF','refer','2022-01-01')
+;
+
+INSERT INTO orders1
+VALUES
+(1,'sundae', 1, 10, '2022-07-05'),
+(2,'cone', 2, 5, '2022-07-05'),
+(3,'sundae', 3, 15, '2022-07-05'),
+(4,'sundae', 4, 9, '2022-07-05'),
+(5,'cone', 5, 10, '2022-07-05'),
+(6,'sundae', 6, 17, '2022-07-05'),
+(7,'cone', 7, NULL, '2022-07-05'),
+(8,'sundae', 8, 20, '2022-07-05'),
+(1,'sundae', 9, 10, '2022-07-05'),
+(2,'sundae', 10, 13, '2022-07-05'),
+(3,'cone', 11, 7, '2022-07-05'),
+(4,'sundae', 12, 31, '2022-07-05'),
+(5,'sundae', 13, 1, '2022-07-05'),
+(6,'cone', 14, 3, '2022-07-05'),
+(7,'cone', 15, 6, '2022-07-05'),
+(8,'sundae', 16, 10, '2022-07-05'),
+(1,'cone', 17, 19, '2022-07-05')
+;
+
+
+with exposed_users AS (
+SELECT
+experiment_name,
+        user_id,
+        feature_flag_evaluation,
+        evaluated_at
+    from assignments1
+    where experiment_name = 'sundae_wizard'
+        and evaluated_at between '2022-07-01' and '2022-07-15'
+),
+
+multiple_variants AS (
+SELECT
+user_id,
+COUNT(DISTINCT feature_flag_evaluation) AS variants
+FROM assignments1
+GROUP BY 1
+HAVING COUNT(DISTINCT feature_flag_evaluation) >1
+ORDER BY 2 DESC
+)
+SELECT
+exposed_users.*
+FROM exposed_users a
+LEFT JOIN multiple_variants b
+ON a.user_id = b.user_id
+WHERE b.user_id IS NULL
+
+
