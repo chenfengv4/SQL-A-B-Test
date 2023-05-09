@@ -1,3 +1,7 @@
+
+-- Suppose we run an AB test to potentially lift the average order of Sundae per users during the period of 2022-07-01 to 2022-07-15. 
+
+
 CREATE TABLE assignments1 (
 user_id int,
 feature_flag_evaluation varchar(255),
@@ -66,6 +70,8 @@ VALUES
 ;
 
 
+---------------------create user level aggregated table: user_level_data:
+CREATE TABLE user_level_data 
 with exposed_users AS (
 SELECT
 experiment_name,
@@ -85,12 +91,50 @@ FROM assignments1
 GROUP BY 1
 HAVING COUNT(DISTINCT feature_flag_evaluation) >1
 ORDER BY 2 DESC
-)
+),
+cleared_user AS (
 SELECT
 exposed_users.*
 FROM exposed_users a
 LEFT JOIN multiple_variants b
 ON a.user_id = b.user_id
 WHERE b.user_id IS NULL
+),
+users AS (
+SELECT
+cleared_user.user_id,
+cleared_user.feature_flag_evaluation AS cohort,    --'test' vs 'control' label
+cleared_user.evaluated_at AS expose_date,
+users1.created_at,
+users1.city_name,
+users1.signup_marketing_channel,
+users1.first_order_at
+FROM 
+cleared_users
+JOIN users1
+ON cleared_users.user_id = users1.user_id
+)
+SELECT
+users.user_id,
+users.cohort,
+users.expose_date,
+users.created_at,
+users.city_name,
+users.sign_up_marketing_channel,
+users.first_order_at, 
+COUNT(IF(order_type = 'sundae', order_id, null) AS cnt_sundae_order,
+COUNT(order_id) AS cnt_order,
+SUM(COALESCE(order_value, 0)) AS tot_order_value
+From users
+LEFT JOIN orders1
+ON users.user_id = orders1.user_id
+WHERE orders1.order_placed_at BETWEEN '2022-07-01' AND '2022-07-15'
+  AND order_placed_at >= expose_date
+
+;
+
+---------------generate summary statistics from user_level_data
+
+
 
 
